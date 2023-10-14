@@ -2,9 +2,9 @@
 
 
 # 프로젝트 멤버
-백한영: 팀장, Clustering & 
+백한영: 팀장, Clustering &  \n
 노찬용: 팀원, 
-이정인: 팀원, 
+이정인: 팀원
 조승현: 팀원, 
 
 # Rice_Classification
