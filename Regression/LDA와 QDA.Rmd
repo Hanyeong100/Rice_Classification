@@ -1,0 +1,182 @@
+---
+title: "lda qda"
+author: "노찬용"
+date: '2023-06-03'
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+setwd("C:/다변량통계/기말 조별과제")
+rice<-read.csv("Rice_preprocess.csv")
+library(MASS)
+library(caret)
+```
+
+#Holdout method
+
+```{r}
+set.seed(123)
+ind <- sample(2, nrow(rice),
+              replace = TRUE,
+              prob = c(0.7, 0.3))
+train <- rice[ind==1,]
+test <- rice[ind==2,]
+```
+
+#LDA
+
+```{r}
+ld <- lda(formula=CLASS ~ .-X,data=train);ld
+apply(ld$means%*%ld$scaling,2,mean)
+```
+
+```{r}
+mean(predict(ld,test)$class==test$CLASS)
+```
+
+```{r}
+tt<-table(test$CLASS,predict(ld,test)$class);tt
+sum(tt[row(tt)==col(tt)])/sum(tt)
+1-sum(tt[row(tt)==col(tt)])/sum(tt)
+```
+
+```{r}
+test$pred<-predict(ld,test)$class
+ggplot(test,
+       aes(CLASS,pred,col=CLASS))+
+  geom_jitter(width=0.2,height = 0.1,size=2)+
+  labs(x="CLASS",
+       y="Predict")
+```
+
+#plot
+
+```{r}
+lda_plot <- cbind(train, predict(ld)$x)
+
+library(ggplot2)
+ggplot(lda_plot, aes(LD1, LD2)) +
+  geom_point(aes(color = CLASS))
+```
+
+#k-fold cross validation
+
+```{r}
+library(cvTools)
+```
+
+```{r}
+k_fold_result<-createFolds(rice$CLASS,k=5,list=TRUE,returnTrain=FALSE)
+ld1<-lda(CLASS~.,data=rice)
+predictions<-predict(ld1,rice[k_fold_result[[1]], ])
+accuracy<-mean(predictions$class == rice[k_fold_result[[1]], "CLASS"])
+accuracies<-rep(NA,5)
+for(i in 1:5){
+  predictions<-predict(ld1,rice[k_fold_result[[i]],])
+  accuracies[i]<-mean(predictions$class == rice[k_fold_result[[i]],"CLASS"])
+}
+average_accuracy<-mean(accuracies)
+print(average_accuracy)
+```
+
+#QDA
+
+```{r}
+library(MASS)
+library(caret)
+set.seed(123)
+ind <- sample(2, nrow(rice),
+              replace = TRUE,
+              prob = c(0.7, 0.3))
+train <- rice[ind==1,]
+test <- rice[ind==2,]
+```
+
+```{r}
+qd <- qda(formula=CLASS ~ .-X,data=train);qd
+predicted<-predict(qd,test)
+```
+
+#table
+
+```{r}
+mean(predicted$class==test$CLASS)
+```
+
+```{r}
+tt<-table(test$CLASS,predict(qd,test)$class);tt
+sum(tt[row(tt)==col(tt)])/sum(tt)
+1-sum(tt[row(tt)==col(tt)])/sum(tt)
+```
+
+```{r}
+library(ggplot2)
+test$pred<-predicted$class
+ggplot(test,
+       aes(CLASS,pred,col=CLASS))+
+  geom_jitter(width=0.2,height = 0.1,size=2)+
+  labs(x="CLASS",
+       y="Predict")
+```
+
+#randomForest
+
+```{r}
+library(randomForest)
+train$CLASS<-as.factor(train$CLASS)
+forest_m<-randomForest(train$CLASS~.-train$X,data=train)
+forest_m$importance
+```
+
+#Partition plot
+
+```{r}
+library(klaR)
+test$CLASS<-as.factor(test$CLASS)
+partimat(formula=test$CLASS~test$PERIMETER+test$ROUNDNESS+test$SOLIDITY+test$SHAPEFACTOR_3,data=test,method="qda",main="Partition plots")
+```
+
+#k-fold cross validation
+
+```{r}
+library(cvTools)
+set.seed(123)
+k_fold_result<-createFolds(rice$CLASS,k=5,list=TRUE,returnTrain=FALSE)
+qd1<-qda(CLASS~.,data=rice)
+predictions<-predict(qd1,rice[k_fold_result[[1]], ])
+accuracy<-mean(predictions$class == rice[k_fold_result[[1]], "CLASS"])
+accuracies<-rep(NA,5)
+for(i in 1:5){
+  predictions<-predict(qd1,rice[k_fold_result[[i]],])
+  accuracies[i]<-mean(predictions$class == rice[k_fold_result[[i]],"CLASS"])
+}
+average_accuracy<-mean(accuracies)
+print(average_accuracy)
+
+```
